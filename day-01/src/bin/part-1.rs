@@ -6,15 +6,33 @@ fn main() {
 
 fn part1(input: &str) -> u32 {
     let result = input
-        .split("\n\n")
-        .map(|elf_load| {
-            elf_load
-                .lines()
-                .map(|item| item.parse::<u32>().unwrap())
-                .sum::<u32>()
+        .lines()
+        .map(|calib| {
+            let numbers: String = calib
+                .split("")
+                .filter(|char| match *char {
+                    "0" => true,
+                    "1" => true,
+                    "2" => true,
+                    "3" => true,
+                    "4" => true,
+                    "5" => true,
+                    "6" => true,
+                    "7" => true,
+                    "8" => true,
+                    "9" => true,
+                    _ => false,
+                })
+                .collect();
+            let firstnum = numbers.chars().next().unwrap();
+            let lastnum = numbers.chars().last().unwrap();
+
+            let mut number = String::new();
+            number.push(firstnum);
+            number.push(lastnum);
+            return number.parse::<u32>().unwrap();
         })
-        .max()
-        .unwrap();
+        .sum();
     return result;
 }
 
@@ -24,6 +42,7 @@ mod tests {
     #[test]
     fn it_works() {
         let result = part1(include_str!("./input-1-test.txt"));
-        assert_eq!(result, 24000);
+        println!("{}", result.to_string());
+        assert_eq!(result, 142);
     }
 }
