@@ -1,4 +1,4 @@
-use std::collections::HashSet;
+use std::collections::{HashMap, HashSet};
 
 fn main() {
     let input = include_str!("./input-1.txt");
@@ -6,13 +6,28 @@ fn main() {
 }
 
 fn process(input: &str) -> u32 {
-    input.lines().map(|x| process_line(x)).sum::<u32>()
+    let mut copies = HashMap::new();
+
+    input
+        .lines()
+        .enumerate()
+        .map(|(i, x)| {
+            let score = process_line(x);
+            let special_i = u32::try_from(i).unwrap();
+            let card_count = *copies.get(&special_i).unwrap_or(&0) + 1;
+
+            for j in special_i..(special_i + score) {
+                copies.insert(j + 1, copies.get(&(j + 1)).unwrap_or(&0) + card_count);
+            }
+
+            card_count
+        })
+        .sum()
 }
 
 fn process_line(line: &str) -> u32 {
     let mut iter = line.split(": ");
 
-    // discard first part
     iter.next();
 
     let mut numbers = iter.next().unwrap().split(" | ");
@@ -22,7 +37,6 @@ fn process_line(line: &str) -> u32 {
         .unwrap()
         .split(" ")
         .filter_map(|x| {
-            dbg!(x);
             let result = x.parse::<u32>();
             match result {
                 Ok(x) => Some(x),
@@ -30,12 +44,11 @@ fn process_line(line: &str) -> u32 {
             }
         })
         .collect();
-    let a = numbers
+    numbers
         .next()
         .unwrap()
         .split(" ")
         .filter_map(|x| {
-            dbg!(x);
             let result = x.parse::<u32>();
             match result {
                 Ok(x) => Some(x),
@@ -43,17 +56,7 @@ fn process_line(line: &str) -> u32 {
             }
         })
         .filter(|x| winning_numbers.contains(x))
-        .inspect(|x| {
-            dbg!(x);
-            ()
-        })
-        .fold(0 as u32, |acc, _| acc + 1);
-    dbg!(a);
-
-    match a {
-        0 => 0,
-        x => (2 as u32).pow(x - 1),
-    }
+        .fold(0 as u32, |acc, _| acc + 1)
 }
 
 #[cfg(test)]
@@ -64,11 +67,11 @@ mod tests {
     #[rstest]
     fn it_works() {
         let result = process(include_str!("./input-1-test.txt"));
-        assert_eq!(result, 13);
+        assert_eq!(result, 30);
     }
 
     #[rstest]
-    #[case("Card 1: 41 48 83 86 17 | 83 86  6 31 17  9 48 53", 8)]
+    #[case("Card 1: 41 48 83 86 17 | 83 86  6 31 17  9 48 53", 4)]
     #[case("Card 2: 13 32 20 16 61 | 61 30 68 82 17 32 24 19", 2)]
     #[case("Card 3:  1 21 53 59 44 | 69 82 63 72 16 21 14  1", 2)]
     #[case("Card 4: 41 92 73 84 69 | 59 84 76 51 58  5 54 83", 1)]
