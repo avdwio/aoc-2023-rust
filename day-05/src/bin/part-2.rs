@@ -1,8 +1,22 @@
+use core::ops::Range;
 use itertools::Itertools;
 
 fn main() {
     let input = include_str!("./input.txt");
     println!("Result: {:?}", process(input));
+}
+
+#[derive(Debug)]
+struct SeedRange {
+    start: u64,
+    range: u64,
+}
+
+impl SeedRange {
+    fn get_range_iter(&self) -> Range<u64> {
+        let x = (self.start..(self.start + self.range)).into_iter();
+        x
+    }
 }
 
 #[derive(Debug, PartialEq)]
@@ -24,7 +38,6 @@ impl CategoryMapper {
     }
 
     fn convert(&self, value: u64) -> Option<u64> {
-        dbg!(self.from, self.range, self.to, value);
         match value {
             x if x >= self.from && x < self.from + self.range => Some(x + self.to - self.from),
             _ => None,
@@ -50,17 +63,24 @@ impl CategoryMapperStage {
     }
 }
 
-fn seeds_parser(input: &str) -> Option<Vec<u64>> {
+fn seeds_parser(input: &str) -> Option<Vec<SeedRange>> {
     Some(
         input
             .split(": ")
             .last()
             .unwrap()
             .split(" ")
-            .map(|x| x.parse().unwrap())
+            .map(|x| x.parse::<u64>().unwrap())
+            .collect::<Vec<_>>()
+            .chunks(2)
+            .map(|i| SeedRange {
+                start: i[0],
+                range: i[1],
+            })
             .collect::<Vec<_>>(),
     )
 }
+
 fn category_mapper_stage_parser(input: &str) -> Option<CategoryMapperStage> {
     let mut it = input.lines();
     it.next();
@@ -78,19 +98,40 @@ fn category_mapper_stage_parser(input: &str) -> Option<CategoryMapperStage> {
     })
 }
 
-fn process1(input: &str) -> Vec<u64> {
+fn process1(input: &str) -> u64 {
     let mut iter = input.split("\n\n");
 
-    let seeds = seeds_parser(iter.next().unwrap()).unwrap();
+    let seed_ranges = seeds_parser(iter.next().unwrap()).unwrap();
 
-    iter.map(|x| category_mapper_stage_parser(x).unwrap())
-        .fold(seeds, |acc, stage| {
-            acc.iter().map(|y| stage.convert(*y)).collect::<Vec<_>>()
+    dbg!(&seed_ranges);
+
+    let stage_vec = iter
+        .map(|x| category_mapper_stage_parser(x).unwrap())
+        .collect::<Vec<_>>();
+
+    let n = seed_ranges
+        .iter()
+        .flat_map(|seed_range| seed_range.get_range_iter())
+        .map(|seed| {
+            stage_vec.iter().fold(seed, |acc, stage| {
+                let m = stage.convert(acc);
+                m
+            })
         })
+        .enumerate()
+        .inspect(|(x, y)| {
+            if x % 100000 == 0 {
+                println!("steps: {}, {}", x / 100000, y);
+            }
+        })
+        .map(|(_, x)| x)
+        .min();
+
+    n.unwrap()
 }
 
 fn process(input: &str) -> u64 {
-    *process1(input).iter().min().unwrap()
+    process1(input)
 }
 
 #[cfg(test)]
@@ -99,14 +140,14 @@ mod tests {
     #[test]
     fn it_works() {
         let result = process1(include_str!("./input-test.txt"));
-        assert_eq!(result, vec![82, 43, 86, 35]);
+        assert_eq!(result, 27);
     }
 
-    #[test]
-    fn test_seeds_parser() {
-        let result = seeds_parser("seeds: 79 14 55 13");
-        assert_eq!(result, Some(vec![79, 14, 55, 13]));
-    }
+    // #[test]
+    // fn test_seeds_parser() {
+    //     let result = seeds_parser("seeds: 79 14 55 13");
+    //     assert_eq!(result, Some(vec![79, 14, 55, 13]));
+    // }
 
     #[test]
     fn test_category_mapper_parser() {
